@@ -3,10 +3,11 @@ Immutable versioning
 
 Immutable versioning is a very simple but powerful idea that aims to
 solve versioning problems. In particular, it aims at making it easy to
-go through breaking changes, which are a natural part of software
-development. It can apply to many systems such as library APIs or even
-languages. The only requirement is the ability to represent the
-difference between two states of a system.
+go through breaking changes which are a natural part of software
+development and simplify package management. It can apply to many
+systems such as library APIs or even languages. The only requirement
+is the ability to represent the difference between two states of a
+system.
 
 The problem
 -----------
@@ -118,3 +119,9 @@ will never change.
 In languages that support pattern matching, it is important that the
 language also support pattern matching on absract types, for instance
 via _view patterns_.
+
+Package management
+------------------
+
+This model can greatly simplify the work of package managers as all
+version constraints can simply be dropped.
