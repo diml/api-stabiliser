@@ -75,7 +75,7 @@ Effectively, we are creating a chain of libraries such that:
 
 - `Foo_v1` depends on `Foo_v2`
 - `Foo_v2` depends on `Foo_v3`
-...
+- ...
 - `Foo_v<n-1>` depends on `Foo_v<n>`
 - `Foo_v<n>` depends on `Foo`
 
