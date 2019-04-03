@@ -1,106 +1,120 @@
-An API stabilistion process
-===========================
+Immutable versioning
+====================
 
-This document is a work in progress.
+Immutable versioning is a very simple but powerful idea that aims to
+solve versioning problems. In particular, it aims at making it easy to
+go through breaking changes, which are a natural part of software
+development. It can apply to many systems such as library APIs or even
+languages. The only requirement is the ability to represent the
+difference between two states of a system.
 
-Abstract
---------
+The problem
+-----------
 
-This document describes a process allowing to add a stable API with
-clear guarantees on top of any library. The goal can be either to
-provide guarantees for libraries that are inherently unstable, or to
-increase the dynamism of an existing library by providing a
-straightforward method to go through breaking API changes.
+Let's consider a system that is continously evolving. Users of this
+system might want to build more complex systems on top of this system,
+and other users might want to build even more complex systems on top
+of all this. For instance, the systems might be libraries.
 
-From the point of view of library authors, the method provides a
-systematic way to go through breaking API change. It relieves the
-library from having to do complex decisions when evolving the
-library. It also take off the pressure from library authors of having
-to come with the perfect design right from the start for new features,
-given that it is often hard to do that before we have some feedback
-from experience.
+As systems evolve and change, other systems built on top need to adapt
+and change as well. If the various systems are built by independent
+developers, keeping everything in sync can quickly become a challenge
+as the number of systems increases.
 
-From the point of view of users, this method give them strong
-guarantees as to how long code written against a stble API will be
-buildable.
+We typically have this problem with libraries: whenever a library
+changes in an incompatible way, each of its user need to upgrade. As
+the number of libraries increases, it can become very difficult for a
+community to cope with breaking changes in widely used libraries.
 
-Definition of stable
---------------------
+The solution
+------------
 
-By stable we mean the following: any code that compiles without
-deprecation warnings is guaranteed to continue building for the next
-two years.
+The solution consist on taking regular snapshots of the system. A
+snapshot is simply another independent system built on top of the main
+one, except that it is guaranteed to never change and always be
+equivalent to the main system at the time the snapshot was taken.
 
-This guarantee only applies when all the depeendencies of the code use
-the method described in this document.
+Initially, because the two systems are equivalent, the snapshot
+requires no extra data. Its size is 0. As the main system evolves, the
+snapshot will need to adapt in order to still look the same to its
+users and its size will slowly increase.
 
-With this guarantee, users always get a window of two years to upgrade
-their code once a feature is deprecated.
+In order to keep the operation sustainable as the number of snapshot
+increases, we enforce that each snapshot is built on top of the next
+one. More precisiely, let `S` be a system and `S<n>` be the last
+snapshot of this system. When we take the next snapshot `S<n+1>`, we
+change `S<n>` so that it is built on top of `S<n+1>` rather than
+`S`. At this point, this is a straightforward operation because `S`
+and `S<n+1>` are equivalent.
 
-The method
-----------
+By construction, each snapshot but the last one are completely frozen
+and never need to change. That means that the maintainers of the
+system only need to focus on the system itself and the very last
+snapshot.
 
-The core idea is to take a snapshot of the API of the library every
-two years. The library itself is unstable and provides no stability
-guarantee, however the API of the snapshot is guaranteed forever
-immutable. API snapshots should be distributed as separate
-packages. This allows external users to take over the maintenance of
-old snapshots once they stop being maintained by upstream.
+In this model, older snapshots tend to be heavier than more recent
+one. Indeed, the snapshot forms a linked chain of systems, each one
+being built on the next one. Users who regularly put in the effort of
+upgrading to recent snapshots are rewarded by relying on a small chain
+of systems, which is likely to be more efficient. Users who do not
+upgrade are penalised by relying on a long chain of linked systems.
 
-Initially the snapshot will be just a thin layer on top of the main
-library. As the library evolves and changes in breaking ways, the
-snapshot might need to be updated in order to still provide the old
-API in terms of the new one.
+Applying this idea to API versioning
+------------------------------------
 
-When creating snapshot `n+1`, we do the following: we make the
-snapshot `n` depend on the `n+1` one instead of the main library. At
-this point, this is a trivial operation given that `n+1` snapshot is
-exactly the current API. This operation ensures that snapshot `n` will
-be very-low maintenance from now on given that it is built on top of a
-stable API.
+Applying this idea to API versioning means the following: consider a
+library `Foo`. Whenever `Foo` is ready for a new stable release, we
+simply create a new library `Foo_v<n>` that depends on `Foo` and is
+equivalent to it, and make `Foo_v<n-1>` depend on `Foo_v<n>` rather
+than `Foo`. At this point, `Foo_v<n-1>` will never change again and we
+can simply delete it from the development repository. In order for
+this to work well with package managers, we should release the various
+`Foo_vXXX` libraries as separate packages.
 
-Even though snapshots are meants to work forever, we recommend to
-deprecate and retire them in order to avoid having an increasing
-number of stable APIs to maintain. We suggest the following scheduler:
-when creating snapshot `n+1`, deprecate snapshot `n` and delete
-snapshot `n-1`.
+Effectively, we are creating a chain of libraries such that:
 
-API snapshots
--------------
+- `Foo_v1` depends on `Foo_v2`
+- `Foo_v2` depends on `Foo_v3`
+...
+- `Foo_v<n-1>` depends on `Foo_v<n>`
+- `Foo_v<n>` depends on `Foo`
 
-The core of the method relies on taking API snapshots. In this section
-we describe a few details that are important to respect when doing so.
+In this list, `Foo` is completely unstable and can change in any way
+at any point. However, all the `Foo_vXXX` libraries are completely and
+forever stable. Everytime one changes `Foo`, they also have to update
+the last snapshot. In a way, we took away the burden of upgrading from
+users and put the pressure on the person doing the breaking change.
 
-### Preserving type equalities
+With this model, we can forget about deprecation warnings. Users who
+make the effort to upgrade are rewarded by faster compilation and
+execution times since they have to go through less compatibility
+layers.
 
-It is important to preserve type equalities. I.e. it should almost
-always be the case that a given type `M.t` should be equal in all
-snapshots of the API. The exact type name might be different, as for
-instance the module name might have been changed. However types that
-logically represent the same thing should be exposed as equal between
-snapshots.
+In any case, several different versions of `Foo` can be linked in the
+same executable since they are effectively different libraries. The
+nice property is that maximum sharing is achived as each version of
+`Foo` is not a full blown copy of `Foo` but rather a diff against the
+next version.
 
-This is to ensure that third-party libraries written against different
-versions of this library can inter-operate. For instance, let's
-imagine that we were applying this method to the standard library,
-then it would be important that `Hashtbl.t` remains the same type at
-all time.
+When minting a stable version, we might also want to trim a bit the
+API rather than take a full snapshot. For instance to hide private
+functions that are only exposed for testing purposes.
 
-### Making most types abstract
+Inter-operability
+-----------------
 
-In order to make the previous rule viable, types that are not
-completely standard and guaranteed to never changed should be made
-abstract.
+One thing to consider is that it is likely that various users of `Foo`
+might need to inter-operate with each other. This might be difficult
+if the values manipulated by the various versions of `Foo` are not
+compatible. In strongly typed languages, it is therefore important to
+expose type equalities from one version of a type to the next version
+as long as they are equivalent.
 
-Types that do not need to be made abstract are types such as booleans,
-the either type, the ordering type, s-expressions, ... Everything else
-should be made abstract.
+This as two consequences: types shouldn't be changed between versions
+as otherwise it would hurt inter-operability. To make this viable,
+most types should be made abstract, except for the ones that we know
+will never change.
 
-### Consuming abstract types
-
-When all the types are abstract, we loose pattern matching. This can
-be a problem. In the long term, we expect that a general solution to
-this problem will be developed and integrated properly in the
-language. In the meantime we propose to rely on the external
-`ppx_view` rewriter which provides a large enough subset of pattern
-matching features for abstract types.
+In languages that support pattern matching, it is important that the
+language also support pattern matching on absract types, for instance
+via _view patterns_.
