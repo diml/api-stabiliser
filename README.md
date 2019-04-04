@@ -97,9 +97,38 @@ nice property is that maximum sharing is achived as each version of
 `Foo` is not a full blown copy of `Foo` but rather a diff against the
 next version.
 
-When minting a stable version, we might also want to trim a bit the
-API rather than take a full snapshot. For instance to hide private
-functions that are only exposed for testing purposes.
+Extensions
+----------
+
+In this section, we propose two small extensions to the model in order
+to make it work well in practice.
+
+### Last snapshot can change in backward compatible ways
+
+In this model, one need to take a new snapshot everytime they want to
+make a release. This is because users are not supposed to use the
+unstable underlying `Lib` library directly. If one releases often,
+this can produce a large amount of snapshots, which in turns could get
+confusing for users.
+
+To cope with this, we relax the condition as follow: the very last
+snapshot doesn't have to be frozen until the next one is
+taken. However, it must be modified in ways that are commonly accepted
+as backward compatible. For instance, adding a new function is OK but
+deleting an existing one is not.
+
+This will provide a lesser guarantee for people using the very last
+snapshot: if they don't make too strong assumption on the API, their
+code will not break. And if their code can make it until the next
+snapshot is taken, it will work forever.
+
+### Trimming the snapshot
+
+Instead of taking a full snapshot, one should trim parts that are not
+meant for users. For instance, it is common to expose private
+functions in modules of the library for the need of other modules of
+the library itself of for test purposes. It is preferable to not
+expose such functions inside the stable snapshots.
 
 Inter-operability
 -----------------
@@ -123,5 +152,11 @@ via _view patterns_.
 Package management
 ------------------
 
-This model can greatly simplify the work of package managers as all
-version constraints can simply be dropped.
+This model can greatly simplify the work of package managers as most
+version constraints can simply be dropped. Indeed, instead of
+depending on a range of versions of a library, one will simply depend
+on a snapshot. In general, there is no need to put version constraints
+on a snapshot since it is frozen. The only case this might be
+necessary is when using the extension allowing the last snapshot to
+evolve in backward compatible ways and a change happen to break some
+user who was making too strong assumptions about the API.
