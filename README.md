@@ -5,9 +5,9 @@ Immutable versioning is a very simple but powerful idea that aims to
 solve versioning problems. In particular, it aims at making it easy to
 go through breaking changes which are a natural part of software
 development and simplify package management. It can apply to many
-systems such as library APIs or even languages. The only requirement
-is the ability to represent the difference between two states of a
-system.
+systems such as library APIs or possibly even languages. The only
+requirement is the ability to represent the difference between two
+states of a system.
 
 The problem
 -----------
