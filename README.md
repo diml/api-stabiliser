@@ -130,6 +130,13 @@ functions in modules of the library for the need of other modules of
 the library itself of for test purposes. It is preferable to not
 expose such functions inside the stable snapshots.
 
+In practice, the smaller the snapshot is and the easier it will be to
+maintain it and implement it in terms of the next one. So it is
+recommened to expose the smallest set of functionalities that the
+library is meant to provide. In particule, one should not expose any
+functionality they are not ready to support forever in one way or
+another.
+
 Inter-operability
 -----------------
 
